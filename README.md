@@ -1,3 +1,67 @@
+## Reflection
+The control module is a very important stage of the AD pipeline. In this project, the inputs states are retrieved from the outputs of the path planning module in the form of waypoints sets. The objective of the controller is to track the path plan as a reference as close as possible, using two actuator commands (steering angle and throttle) within a certain physical constraints. This particular control problem is framed into an optimization problem with the help of MPC, and the output commands cost functions are solved by the Ipopt Nonlinear Programming Solver.
+
+<p align="center">
+     <img src="./Pipeline.png" alt="Pipeline" width="40%" height="40%">
+     <br>Pipeline.png
+</p>
+
+# Vehicle Model
+An classic Bicycle Model is use here to deliver the vehicle dynamic of each time instance:
+<p align="center">
+     <img src="./Model.png" alt="Model" width="40%" height="40%">
+     <br>Model.png
+</p>
+The local coordinates/states are updated through the following dynamics:
+
+```cpp
+          px[t+dt] = px[t] + v[t] * cos(psi[t]) * dt;
+          py[t+dt] = py[dt] + v[t] * sin(psi[t]) * dt;
+          psi[t+dt] = psi[t] - v[t] * delta[t] / Lf * dt;
+          v[t+dt] = v[t] + a[t] * dt;
+          cte[t+dt] = cte[t] + v[t] * sin(epsi[t]) * dt;
+          epsi[t+dt] = epsi[t]+ v[t] * delta[t] / Lf * dt;
+```
+Where px,py is the vehicle position and psi is the heading orientation. The velocity v is updated with the throttle(accel) a. The sampling time is selected as 100ms for this project.
+<p align="center">
+     <img src="./dynamic local.png" alt="dynamic local" width="40%" height="40%">
+     <br>dynamic local.png
+</p>
+
+The error feedbacks are updated through the following equations: 
+```cpp
+          cte[t+dt] = cte[t] + v[t] * sin(epsi[t]) * dt;
+          epsi[t+dt] = epsi[t]+ v[t] * delta[t] / Lf * dt;
+```
+Where cte is the cross track error, which corresponds to distance of vehicle from the planned trajectory. The epsi is the is the angle difference of the vehicle trajectory with the planned trajector. 
+<p align="center">
+     <img src="./dynamic map.png" alt="dynamic map" width="40%" height="40%">
+     <br>dynamic map.png
+</p>
+
+# Cost Functions and MPC Tuning 
+The cost function part is similar to a classic convex optimal control problem:
+<p align="center">
+     <img src="./CF.png" alt="CF" width="40%" height="40%">
+     <br>CF.png
+</p>
+Based on the objectives, the cost function get penalized everytime:
+* cte and epsi increase - to ensure steady state error
+* high usage of control effort - to minimize the use of actuators
+* high change rate of control effort - to ensure smooth drive 
+
+The weight for each penalty is defined based on the importance of the states. Refference tracking is set to the highest priority, then smoothness is very important as well to damp the overshoot of the response. 
+
+For the rest of states feed into the CppAD are served as a regulator which had the constraints set to zero. They will be updated with the new control outputs each loop to solve for the cost function. 
+<p align="center">
+     <img src="./solver_in.png" alt="solver_in" width="40%" height="40%">
+     <br>solver_in.png
+</p>
+
+# Prediction Horizon and Latency Effects
+The prediction horizon is selected as 10 steps with a sampling time of 100ms. The control horizon is not specified (can be improved since we working with a simulator and the response is fairly fast). Some trade-off were made to ensure the visibility of the prediction and also limited the computation cost.
+The states are updated for an interval of 100ms before feeding into the solver, to compensate the latancy effects(if introduced).
+
 # CarND-Controls-MPC
 Self-Driving Car Engineer Nanodegree Program
 
@@ -54,63 +118,3 @@ is the vehicle offset of a straight line (reference). If the MPC implementation 
 2. The `lake_track_waypoints.csv` file has waypoints of the lake track. This could fit polynomials and points and see of how well your model tracks curve. NOTE: This file might be not completely in sync with the simulator so your solution should NOT depend on it.
 3. For visualization this C++ [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.)
 4.  Tips for setting up your environment are available [here](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/f758c44c-5e40-4e01-93b5-1a82aa4e044f/concepts/23d376c7-0195-4276-bdf0-e02f1f3c665d)
-5. **VM Latency:** Some students have reported differences in behavior using VM's ostensibly a result of latency.  Please let us know if issues arise as a result of a VM environment.
-
-## Editor Settings
-
-We have kept editor configuration files out of this repo to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
-
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
-
-## Code Style
-
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
-
-## Project Instructions and Rubric
-
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
-
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/b1ff3be0-c904-438e-aad3-2b5379f0e0c3/concepts/1a2255a0-e23c-44cf-8d41-39b8a3c8264a)
-for instructions and the project rubric.
-
-## Hints!
-
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
-
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. We omitted IDE profiles to ensure
-students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. Most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
-
-## How to write a README
-A well written README file can enhance your project and portfolio and develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
