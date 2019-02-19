@@ -2,15 +2,15 @@
 The control module is a very important stage of the AD pipeline. In this project, the inputs states are retrieved from the outputs of the path planning module in the form of waypoints sets. The objective of the controller is to track the path plan as a reference as close as possible, using two actuator commands (steering angle and throttle) within a certain physical constraints. This particular control problem is framed into an optimization problem with the help of MPC, and the output commands cost functions are solved by the Ipopt Nonlinear Programming Solver.
 
 <p align="center">
-     <img src="./Pipeline.png" alt="Pipeline" width="40%" height="40%">
-     <br>Pipeline.png
+     <img src="./Pipeline.PNG" alt="Pipeline" width="40%" height="40%">
+     <br>Pipeline.PNG
 </p>
 
 # Vehicle Model
 An classic Bicycle Model is use here to deliver the vehicle dynamic of each time instance:
 <p align="center">
-     <img src="./Model.png" alt="Model" width="40%" height="40%">
-     <br>Model.png
+     <img src="./Model.PNG" alt="Model" width="40%" height="40%">
+     <br>Model.PNG
 </p>
 The local coordinates/states are updated through the following dynamics:
 
@@ -42,8 +42,8 @@ Where cte is the cross track error, which corresponds to distance of vehicle fro
 # Cost Functions and MPC Tuning 
 The cost function part is similar to a classic convex optimal control problem:
 <p align="center">
-     <img src="./CF.png" alt="CF" width="40%" height="40%">
-     <br>CF.png
+     <img src="./CF.PNG" alt="CF" width="40%" height="40%">
+     <br>CF.PNG
 </p>
 Based on the objectives, the cost function get penalized everytime:
 * cte and epsi increase - to ensure steady state error
