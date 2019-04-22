@@ -1,3 +1,61 @@
+## New Updates
+<p align="center">
+     <img src="./MPCDEMO.gif" alt="DEMO" width="40%" height="40%">
+     <br>MPCDEMO.gif
+</p>
+The vehicle can now drive up to 100mph in the test track. I made the following changes:
+
+# Moving Average Filter
+I used a 5 step moving average to smooth out the acceleration reading, instead of directly getting it from the WebSocket. This will improve the performance under some fast accel/deccel situations. I added a timestamp function and deque/sliding window array to create this moving average filter.  
+
+# Dynamic Reference Velocity
+Now the reference should be a range instead of a fixed value. The reference speed will drop if the incoming waypoints/turning angle is big. The following function added into the MPC class, to change the global variable ref_v based on accumulated turning angle for the next waypoints, and the function is called in the main loop. When tuning the velocity, we turn the range [vxmin,vxmax].
+```cpp
+void MPC::VelTune(const VectorXd &xvals, const VectorXd &yvals){
+  double turnAngle = 0;
+  for(int i = 1; i<xvals.size();++i){
+    turnAngle += fabs(atan2(yvals[i] - yvals[i-1] , xvals[i] - xvals[i-1]));
+  }
+  turnAngle /= xvals.size(); // average turning angle for each step
+  const double turnMax = 0.6, turnMin = 0.1; // the max and min turn for each step
+  turnAngle = max(min(turnAngle, turnMax), turnMin); // satuation
+  // vx_max - vx_min is a decceleration range, normally ~30,40
+  ref_v = vx_max - ((vx_max - vx_min) * turnAngle / turnMax); // higher turn angle, lower speed
+  //cout<< "The speed ref: " << ref_v << endl;
+  ref_v = max(min(ref_v, vx_max), vx_min);
+}
+```
+# matplotlibcpp
+<p align="center">
+     <img src="./MATPLOT.png" alt="The map and the position plot" width="40%" height="40%">
+     <br>MATPLOT.png
+</p>
+I added some matplot functions to draw the map and vehicle performance, and this is very helpful when tuning the controller. The map drawing function is the cViz.h file, and the plot data is saved in a vector<double> array, and it caches the data when the main function is running. I set it to stop after 300 loop iteration, feel free to change the information you want to plot and the iteration numbers. Here is the instruction on how to use it:
+
+It may be neccesary to install additional dependencies, especially for Docker and Ubuntu BASH on Windows hosts.  A complete list of dependencies can be found [here](https://github.com/udacity/CarND-MPC-Quizzes/blob/master/Dockerfile).  The mind the line solution uses a matplotlib inspired plotting cpp plotting library, which depends on python components.  To enable plotting, most Windows users will need to execute the following commands **note for dockers users, leave out ```sudo```):
+- ```sudo apt-get update```
+- ```sudo apt-get install python-matplotlib```
+- ```sudo apt-get install python2.7-dev```
+
+In addition, to display plots, an X-server must be running on the host and accessible.  To accomplish this in Ubuntu BASH for windows, do the following:
+- [Download and install Xming](https://sourceforge.net/projects/xming/?source=typ_redirect)
+- Start Xming
+- execute the following in the terminal: ```export DISPLAY=:0```
+- run the code from the build folder ```./mpc```
+
+Some guides about the matplotlibcpp: [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.)
+
+# Some Tuning Tips (More time spent = better tuning )
+Use a configuration file to change the setting would help, so that you don't have to recompile it every time(create a vehicle/configuration class, and link/read the parameters to a txt/JSON file).
+I tried 25 prediction horizon. It works really good under slow speed situation. However, it tends to react too early when facing a curved road. When I reduce it to 15 prediction horizon, it works fine with a reference speed about 100mph. 
+To make the vehicle go faster, we need to lose up a bit on the tracking error, to make the car have some space to oscillate after a big turn. But we can not make to swing too much, which means we should increase the steering actuation and change of steering actuation weight to make the yaw transition smoother. Since the speed is high, it requires more aggressive yaw control, and we should increase the yaw error weight as well. 
+Plus, this additional cost function really helps: 
+```cpp
+              fg[0] += 300*CppAD::pow(vars[delta_start + t] * vars[v_start + t], 2);
+```
+It penalizes the vehicle for speeding and steering the same time, which prevent it from oscillating too much during/after a big curve.
+If the vehicle hits the road curb often, maybe the speed weight is too high, the car is trying too hard to catch up the speed.
+
 ## Reflection
 The control module is a very important stage of the AD pipeline. In this project, the inputs states are retrieved from the outputs of the path planning module in the form of waypoints sets. The objective of the controller is to track the path plan as a reference as close as possible, using two actuator commands (steering angle and throttle) within a certain physical constraints. This particular control problem is framed into an optimization problem with the help of MPC, and the output commands cost functions are solved by the Ipopt Nonlinear Programming Solver.
 
