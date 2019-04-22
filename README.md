@@ -27,8 +27,8 @@ void MPC::VelTune(const VectorXd &xvals, const VectorXd &yvals){
 ```
 # matplotlibcpp
 <p align="center">
-     <img src="./MATPLOT.png" alt="The map and the position plot" width="40%" height="40%">
-     <br>MATPLOT.png
+     <img src="./MATPLOT.PNG" alt="The map and the position plot" width="40%" height="40%">
+     <br>MATPLOT.PNG
 </p>
 I added some matplot functions to draw the map and vehicle performance, and this is very helpful when tuning the controller. The map drawing function is the cViz.h file, and the plot data is saved in a vector<double> array, and it caches the data when the main function is running. I set it to stop after 300 loop iteration, feel free to change the information you want to plot and the iteration numbers. Here is the instruction on how to use it:
 
