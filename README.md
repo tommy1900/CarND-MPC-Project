@@ -65,7 +65,7 @@ The control module is a very important stage of the AD pipeline. In this project
 </p>
 
 # Vehicle Model
-An classic Bicycle Model is use here to deliver the vehicle dynamic of each time instance:
+An classic Bicycle Model is use here to deliver the vehicle kinematics of each time instance:
 <p align="center">
      <img src="./Model.PNG" alt="Model" width="40%" height="40%">
      <br>Model.PNG
